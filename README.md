@@ -23,7 +23,7 @@ A command-line tool to backup, restore, and migrate your OpenClaw agents between
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/openclaw-brm.git
+git clone https://github.com/jp-moregain/openclaw-brm.git
 cd openclaw-brm
 
 # Make executable
