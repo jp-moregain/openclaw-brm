@@ -164,8 +164,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Support
 
-- GitHub Issues: [Report a bug or request a feature](https://github.com/yourusername/openclaw-brm/issues)
-- Discussions: [Ask questions or share ideas](https://github.com/yourusername/openclaw-brm/discussions)
+- GitHub Issues: [Report a bug or request a feature](https://github.com/jp-moregain/openclaw-brm/issues)
+- Discussions: [Ask questions or share ideas](https://github.com/jp-moregain/openclaw-brm/discussions)
 
 ---
 
