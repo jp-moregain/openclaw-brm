@@ -4,7 +4,7 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](https://github.com/yourusername/openclaw-brm)
+[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](https://github.com/jp-moregain/openclaw-brm)
 
 A command-line tool to backup, restore, and migrate your OpenClaw agents between systems.
 
@@ -12,7 +12,8 @@ A command-line tool to backup, restore, and migrate your OpenClaw agents between
 
 - **Backup**: Create compressed archives of your agents with all configurations
 - **Restore**: Recover agents from backups to any location
-- **Migrate**: Move agents between systems (coming in v0.2.0)
+- **Migrate**: Move agents between systems via SSH/SCP (NEW in v0.2.0!)
+- **List**: View all configured agents at a glance (NEW in v0.2.0!)
 - **Dry-run**: Preview operations before executing
 - **Smart Detection**: Automatically finds agent workspaces
 - **Config Preservation**: Maintains openclaw.json entries
@@ -69,6 +70,29 @@ sudo ln -s $(pwd)/src/openclaw-brm.py /usr/local/bin/openclaw-brm
 ./openclaw-brm.py restore backup.oca --dry-run
 ```
 
+### Migrate an Agent (NEW!)
+
+```bash
+# Migrate to remote host
+./openclaw-brm.py migrate drpowerscale --to user@remote-server
+
+# Migrate and keep local copy
+./openclaw-brm.py migrate drpowerscale --to user@remote-server --keep-local
+
+# Preview migration
+./openclaw-brm.py migrate drpowerscale --to user@remote-server --dry-run
+
+# Specify remote directory
+./openclaw-brm.py migrate drpowerscale --to user@remote-server --remote-dir /opt/agents
+```
+
+### List Agents (NEW!)
+
+```bash
+# List all configured agents
+./openclaw-brm.py list
+```
+
 ## 📋 Commands
 
 ### `backup <agent_id>`
@@ -88,9 +112,25 @@ Restore an agent from a backup archive.
 - `--target-dir`: Target directory for restoration (default: original path)
 - `--dry-run`: Preview restore without making changes
 
-### `migrate <agent_id>` (Coming Soon)
+### `migrate <agent_id>`
 
-Migrate an agent to a remote host via SSH.
+Migrate an agent to a remote host via SSH/SCP.
+
+**Options:**
+- `--to` (required): Remote host (`user@hostname` or `hostname`)
+- `--remote-dir`: Remote directory for temporary backup (default: `~/.openclaw/migrations/`)
+- `--keep-local`: Keep local agent after migration (default: remove after verification)
+- `--dry-run`: Preview migration without executing
+
+**Requirements:**
+- SSH access to remote host
+- OpenClaw installed on remote host (for auto-restore)
+
+### `list`
+
+List all configured agents from openclaw.json.
+
+Shows agent ID, name, workspace path, and whether the workspace exists.
 
 ## 📁 Archive Format (.oca)
 
