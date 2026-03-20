@@ -140,7 +140,8 @@ def create_manifest(agent_id: str, workspace_path: Path,
 
 
 def backup_agent(agent_id: str, output_file: Optional[str] = None,
-                 include_knowledge: bool = True, dry_run: bool = False) -> bool:
+                 include_knowledge: bool = True, dry_run: bool = False,
+                 include_dirs: Optional[List[str]] = None) -> bool:
     """Backup an OpenClaw agent to .oca file"""
 
     log_info(f"Backing up agent: {agent_id}")
@@ -168,16 +169,39 @@ def backup_agent(agent_id: str, output_file: Optional[str] = None,
     manifest = create_manifest(agent_id, workspace, include_knowledge)
     files_to_backup = []
 
+    # Well-known workspace files (used for informational logging)
     core_files = [
         "AGENTS.md", "SOUL.md", "IDENTITY.md", "USER.md",
-        "MEMORY.md", "HEARTBEAT.md", "TOOLS.md", "ACCESS.md", "RAG.md"
+        "MEMORY.md", "HEARTBEAT.md", "TOOLS.md", "ACCESS.md", "RAG.md",
+        "IDEAS.md", "BOOTSTRAP.md", "STORY.md",
     ]
 
+    # Collect all .md files in the workspace root so user-created
+    # markdown files are never missed.
+    seen: set[str] = set()
+    for md_file in sorted(workspace.glob("*.md")):
+        if md_file.name not in seen:
+            seen.add(md_file.name)
+            files_to_backup.append(md_file)
+            manifest["files"].append(md_file.name)
+
+    # Log which well-known files were found / missing
     for filename in core_files:
-        file_path = workspace / filename
-        if file_path.exists():
-            files_to_backup.append(file_path)
-            manifest["files"].append(filename)
+        if filename in seen:
+            log_success(f"Included core file: {filename}")
+        else:
+            log_info(f"Core file not present: {filename}")
+
+    extra_md = seen - set(core_files)
+    if extra_md:
+        log_success(
+            f"Included {len(extra_md)} extra .md file(s): "
+            f"{', '.join(sorted(extra_md))}"
+        )
+
+    # --- Subdirectories ---------------------------------------------------
+    # Always back up knowledge/ (respecting --no-knowledge) and memory/.
+    # Users can specify additional directories via --include-dir.
 
     knowledge_dir = workspace / "knowledge"
     if knowledge_dir.exists() and include_knowledge:
@@ -194,6 +218,23 @@ def backup_agent(agent_id: str, output_file: Optional[str] = None,
             if item.is_file():
                 files_to_backup.append(item)
                 manifest["files"].append(str(item.relative_to(workspace)))
+
+    # Back up user-specified extra directories
+    for dir_name in (include_dirs or []):
+        extra_dir = workspace / dir_name
+        if not extra_dir.exists():
+            log_warning(f"--include-dir '{dir_name}' not found, skipping")
+            continue
+        if not extra_dir.is_dir():
+            log_warning(f"--include-dir '{dir_name}' is not a directory, skipping")
+            continue
+        count = 0
+        for item in extra_dir.rglob("*"):
+            if item.is_file():
+                files_to_backup.append(item)
+                manifest["files"].append(str(item.relative_to(workspace)))
+                count += 1
+        log_success(f"Included directory '{dir_name}': {count} file(s)")
 
     config = get_agent_config(agent_id)
     if config:
@@ -621,6 +662,7 @@ Examples:
     %(prog)s backup drpowerscale -o mybackup.oca    # Backup to specific file
     %(prog)s backup drpowerscale --dry-run          # Preview what would be backed up
     %(prog)s backup drpowerscale --no-knowledge     # Exclude knowledge directory
+    %(prog)s backup drpowerscale --include-dir projects  # Include extra subdirectory
 
   Restore:
     %(prog)s restore drpowerscale_20260219.oca      # Restore agent
@@ -647,6 +689,11 @@ Examples:
     backup_parser.add_argument('-o', '--output', help='Output file path')
     backup_parser.add_argument('--no-knowledge', action='store_true',
                               help='Exclude knowledge directory from backup')
+    backup_parser.add_argument('--include-dir', action='append', default=[],
+                              metavar='DIR',
+                              help='Extra workspace subdirectory to include '
+                                   '(repeatable, e.g. --include-dir projects '
+                                   '--include-dir data)')
     backup_parser.add_argument('--dry-run', action='store_true',
                               help='Show what would be backed up without creating files')
 
@@ -682,7 +729,8 @@ Examples:
             args.agent_id,
             output_file=args.output,
             include_knowledge=not args.no_knowledge,
-            dry_run=args.dry_run
+            dry_run=args.dry_run,
+            include_dirs=args.include_dir
         )
         sys.exit(0 if success else 1)
 
